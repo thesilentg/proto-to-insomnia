@@ -307,6 +307,9 @@ func (e *insomniaenv) generateMockField(messageDefinition *typemap.MessageDefini
 		fallthrough
 	case descriptor.FieldDescriptorProto_TYPE_BYTES:
 		msg := e.registry.MessageDefinition(field.GetTypeName())
+		if msg == nil {
+			return fmt.Sprintf("\"Message %s could not be found\"", field.GetTypeName())
+		}
 		return e.generateMockMessage(msg, depth+1)
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
 		return generateMockEnumValue(messageDefinition, field)
