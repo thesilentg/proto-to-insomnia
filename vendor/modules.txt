@@ -1,0 +1,16 @@
+# github.com/golang/protobuf v1.3.2
+github.com/golang/protobuf/jsonpb
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/protoc-gen-go/plugin
+github.com/golang/protobuf/ptypes/struct
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
+# github.com/twitchtv/protogen v0.1.0
+github.com/twitchtv/protogen
+github.com/twitchtv/protogen/stringutils
+github.com/twitchtv/protogen/typemap
+# github.com/twitchtv/twirp v5.8.0+incompatible
+github.com/twitchtv/twirp
+github.com/twitchtv/twirp/ctxsetters
+github.com/twitchtv/twirp/internal/contextkeys
