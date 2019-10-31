@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -97,9 +98,10 @@ func (e *insomniaenv) Generate(in *plugin.CodeGeneratorRequest) (*plugin.CodeGen
 		return nil, err
 	}
 
-	e.registry = typemap.New(filesToGenerate)
+	e.registry = typemap.New(in.ProtoFile)
 
 	resp := new(plugin.CodeGeneratorResponse)
+
 	for _, file := range filesToGenerate {
 		respFile := e.generate(file)
 		if respFile != nil {
@@ -129,12 +131,13 @@ func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto) *plugin.Cod
 
 	insomniaExport.Resources = resources
 
-	b, err := json.MarshalIndent(insomniaExport, "", "	")
+	b, err := json.MarshalIndent(insomniaExport, "", "\t")
 	if err != nil {
 		return nil
 	}
 
-	resp.Name = proto.String(file.GetName() + "-insomnia-env.json")
+	fileWithoutPath := strings.TrimSuffix(file.GetName(), filepath.Ext(file.GetName()))
+	resp.Name = proto.String(fmt.Sprintf("%s-insomnia-env.json", fileWithoutPath))
 	resp.Content = proto.String(string(b))
 
 	return resp
@@ -143,7 +146,7 @@ func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto) *plugin.Cod
 func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileDescriptorProto) []interface{} {
 	resources := []interface{}{}
 	for _, service := range file.Service {
-		requestGroupID := "request_group" + *service.Name
+		requestGroupID := fmt.Sprintf("request_group-%s", *service.Name)
 		resources = append(resources, RequestGroup{
 			Resource: Resource{
 				Type:     "request_group",
@@ -152,7 +155,7 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 				Name:     *service.Name,
 			},
 			Environment: map[string]string{
-				*service.Name: "{{ base_url }}" + pathPrefix(file, service),
+				*service.Name: fmt.Sprintf("{{ base_url }}%s", pathPrefix(file, service)),
 			},
 		})
 
@@ -169,7 +172,7 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 			resources = append(resources, Request{
 				Resource: Resource{
 					Type:     "request",
-					ID:       "request" + *service.Name + *method.Name,
+					ID:       fmt.Sprintf("request-%s-%s", service.GetName(), method.GetName()),
 					ParentID: &requestGroupID,
 					Name:     *method.Name,
 				},
@@ -180,7 +183,7 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 						"value": "application/json",
 					},
 				},
-				URL: "{{" + *service.Name + "}}" + "/" + *method.Name,
+				URL: fmt.Sprintf("{{%s}}%s", service.GetName(), method.GetName()),
 				Body: RequestBody{
 					MimeType: "application/json",
 					Text:     output,
@@ -211,7 +214,7 @@ func generateEnvironment(workspaceID string) []interface{} {
 			Name:     "Localhost - Https",
 		},
 		Data: map[string]string{
-			"base_url": "https://localhost",
+			"base_url": "https://localhost:8000",
 		},
 	}
 
@@ -223,7 +226,7 @@ func generateEnvironment(workspaceID string) []interface{} {
 			Name:     "Localhost - Http",
 		},
 		Data: map[string]string{
-			"base_url": "http://localhost",
+			"base_url": "http://localhost:8000",
 		},
 	}
 	return []interface{}{baseEnv, httpsEnv, httpEnv}
@@ -355,14 +358,15 @@ func generateRandomString(n int) string {
 }
 
 func generateWorkspace(file *descriptor.FileDescriptorProto) (Workspace, string) {
+	id := fmt.Sprintf("workspace-%s-%s", file.GetName(), file.GetPackage())
 	return Workspace{
 		Resource: Resource{
 			Type:     "workspace",
-			ID:       "workspace",
+			ID:       id,
 			ParentID: nil,
 			Name:     getFileName(*file.Name),
 		},
-	}, "workspace"
+	}, id
 }
 
 func getFileName(s string) string {
