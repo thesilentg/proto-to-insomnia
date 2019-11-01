@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -271,6 +272,13 @@ func (e *insomniaenv) generateMockMessage(messageDefinition *typemap.MessageDefi
 }
 
 func (e *insomniaenv) generateMockField(messageDefinition *typemap.MessageDefinition, field *descriptor.FieldDescriptorProto, depth int) string {
+	// Special case these since they are interpreted differently
+	if field.GetTypeName() == ".google.protobuf.Timestamp" {
+		return fmt.Sprintf("\"%s\"", randomTimestamp())
+	} else if field.GetTypeName() == ".google.protobuf.Duration" {
+		return fmt.Sprintf("\"%d.%03ds\"", rand.Intn(1000), rand.Intn(100))
+	}
+
 	switch fieldType := *field.Type; fieldType {
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
 		fallthrough
@@ -334,6 +342,12 @@ func generateMockEnumValue(messageDefinition *typemap.MessageDefinition, field *
 		}
 	}
 	return fmt.Sprintf("\"%s\"", field.GetTypeName())
+}
+
+func randomTimestamp() string {
+	randomTime := rand.Int63n(time.Now().Unix()-94608000) + 94608000
+	randomNow := time.Unix(randomTime, 0)
+	return randomNow.Format(time.RFC3339)
 }
 
 func generateRandomEnumValue(enum *descriptor.EnumDescriptorProto) string {
