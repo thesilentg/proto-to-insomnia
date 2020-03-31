@@ -1,4 +1,4 @@
-module proto-to-insomnia
+module github.com/thesilentg/proto-to-insomnia
 
 go 1.13
 
