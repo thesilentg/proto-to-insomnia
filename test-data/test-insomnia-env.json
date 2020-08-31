@@ -116,7 +116,7 @@
 				"mimeType": "application/json",
 				"text": "{\n\t\"basePrice\": -136,\n\t\"taxablePrice\": -286\n}"
 			},
-			"description": " This is a comment about the C method\n"
+			"description": ""
 		}
 	]
 }

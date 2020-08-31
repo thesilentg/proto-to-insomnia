@@ -14,6 +14,5 @@ service TwitchPersonalization {
     rpc B(Price) returns (Price);
     // This is a comment about the A method
     rpc A(Price) returns (Price);
-    // This is a comment about the C method
     rpc C(Price) returns (Price);
 }
