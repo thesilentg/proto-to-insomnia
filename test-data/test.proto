@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package proto.to.insomania.test.package;
+
+// This is a comment about the message
+message Price {
+    int32 base_price = 1;
+    int32 taxable_price = 2;
+}
+
+// This is a comment about the service
+service TwitchPersonalization {
+    // This is a comment about the B method
+    rpc B(Price) returns (Price);
+    // This is a comment about the A method
+    rpc A(Price) returns (Price);
+    // This is a comment about the C method
+    rpc C(Price) returns (Price);
+}

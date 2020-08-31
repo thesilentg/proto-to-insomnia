@@ -1,0 +1,122 @@
+{
+	"_type": "export",
+	"__export_format": 3,
+	"__export_source": "protoc-gen-insomniaenv",
+	"resources": [
+		{
+			"_type": "workspace",
+			"_id": "workspace-test.proto-proto.to.insomania.test.package",
+			"parentId": null,
+			"name": "Test"
+		},
+		{
+			"_type": "environment",
+			"_id": "BaseEnvironment",
+			"parentId": "workspace-test.proto-proto.to.insomania.test.package",
+			"name": "Base",
+			"data": {}
+		},
+		{
+			"_type": "environment",
+			"_id": "Staging",
+			"parentId": "BaseEnvironment",
+			"name": "Staging",
+			"data": {
+				"base_url": "http://www.staging-host.com"
+			}
+		},
+		{
+			"_type": "environment",
+			"_id": "Production",
+			"parentId": "BaseEnvironment",
+			"name": "Production",
+			"data": {
+				"base_url": "http://www.production-host.com"
+			}
+		},
+		{
+			"_type": "environment",
+			"_id": "LocalhostHttps",
+			"parentId": "BaseEnvironment",
+			"name": "Localhost - Https",
+			"data": {
+				"base_url": "https://localhost:8000"
+			}
+		},
+		{
+			"_type": "environment",
+			"_id": "LocalhostHttp",
+			"parentId": "BaseEnvironment",
+			"name": "Localhost - Http",
+			"data": {
+				"base_url": "http://localhost:8000"
+			}
+		},
+		{
+			"_type": "request_group",
+			"_id": "request_group-TwitchPersonalization",
+			"parentId": "workspace-test.proto-proto.to.insomania.test.package",
+			"name": "TwitchPersonalization",
+			"environment": {
+				"TwitchPersonalization": "{{ base_url }}/twirp/proto.to.insomania.test.package.TwitchPersonalization/"
+			}
+		},
+		{
+			"_type": "request",
+			"_id": "request-TwitchPersonalization-A",
+			"parentId": "request_group-TwitchPersonalization",
+			"name": "A",
+			"method": "POST",
+			"url": "{{TwitchPersonalization}}A",
+			"headers": [
+				{
+					"name": "Content-Type",
+					"value": "application/json"
+				}
+			],
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n\t\"basePrice\": 438,\n\t\"taxablePrice\": -163\n}"
+			},
+			"description": " This is a comment about the A method\n"
+		},
+		{
+			"_type": "request",
+			"_id": "request-TwitchPersonalization-B",
+			"parentId": "request_group-TwitchPersonalization",
+			"name": "B",
+			"method": "POST",
+			"url": "{{TwitchPersonalization}}B",
+			"headers": [
+				{
+					"name": "Content-Type",
+					"value": "application/json"
+				}
+			],
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n\t\"basePrice\": 85,\n\t\"taxablePrice\": -197\n}"
+			},
+			"description": " This is a comment about the B method\n"
+		},
+		{
+			"_type": "request",
+			"_id": "request-TwitchPersonalization-C",
+			"parentId": "request_group-TwitchPersonalization",
+			"name": "C",
+			"method": "POST",
+			"url": "{{TwitchPersonalization}}C",
+			"headers": [
+				{
+					"name": "Content-Type",
+					"value": "application/json"
+				}
+			],
+			"body": {
+				"mimeType": "application/json",
+				"text": "{\n\t\"basePrice\": -136,\n\t\"taxablePrice\": -286\n}"
+			},
+			"description": " This is a comment about the C method\n"
+		}
+	]
+}

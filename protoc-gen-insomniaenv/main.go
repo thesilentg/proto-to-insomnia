@@ -17,9 +17,11 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +45,12 @@ func main() {
 
 type insomniaenv struct {
 	registry *typemap.Registry
+}
+
+// This config is parsed from the input of the insomniaenv_opt command line argument
+// It is used to add additional environments besides localhost into the exported Environment
+type Config struct {
+	Environments map[string]string `json:"environments"`
 }
 
 // InsomniaExport describes the structure of an Insomnia export
@@ -85,6 +93,7 @@ type Request struct {
 	URL     string              `json:"url"`
 	Headers []map[string]string `json:"headers"`
 	Body    RequestBody         `json:"body"`
+	Description string 			`json:"description"`
 }
 
 // RequestBody describes the structure of an Insomnia RequestBody
@@ -102,20 +111,21 @@ func (e *insomniaenv) Generate(in *plugin.CodeGeneratorRequest) (*plugin.CodeGen
 	e.registry = typemap.New(in.ProtoFile)
 
 	resp := new(plugin.CodeGeneratorResponse)
-
 	for _, file := range filesToGenerate {
-		respFile := e.generate(file)
-		if respFile != nil {
-			resp.File = append(resp.File, respFile)
+		respFile, err := e.generate(file, in.Parameter)
+		if err != nil {
+			return nil, err
 		}
+
+		resp.File = append(resp.File, respFile)
 	}
 	return resp, nil
 }
 
-func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto) *plugin.CodeGeneratorResponse_File {
+func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto, param *string) (*plugin.CodeGeneratorResponse_File, error) {
 	resp := new(plugin.CodeGeneratorResponse_File)
 	if len(file.Service) == 0 {
-		return nil
+		return nil, errors.New("no service")
 	}
 
 	insomniaExport := InsomniaExport{
@@ -127,25 +137,33 @@ func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto) *plugin.Cod
 	resources := []interface{}{}
 	workspace, workspaceID := generateWorkspace(file)
 	resources = append(resources, workspace)
-	resources = append(resources, generateEnvironment(workspaceID)...)
-	resources = append(resources, e.generateMethods(workspaceID, file)...)
 
+	envs, err := generateEnvironment(workspaceID, param)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, env := range envs {
+		resources = append(resources, env)
+	}
+
+	resources = append(resources, e.generateMethods(workspaceID, file)...)
 	insomniaExport.Resources = resources
 
 	b, err := json.MarshalIndent(insomniaExport, "", "\t")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	fileWithoutPath := strings.TrimSuffix(file.GetName(), filepath.Ext(file.GetName()))
 	resp.Name = proto.String(fmt.Sprintf("%s-insomnia-env.json", fileWithoutPath))
 	resp.Content = proto.String(string(b))
 
-	return resp
+	return resp, nil
 }
 
 func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileDescriptorProto) []interface{} {
-	resources := []interface{}{}
+	resources := make([]interface{}, 0)
 	for _, service := range file.Service {
 		requestGroupID := fmt.Sprintf("request_group-%s", *service.Name)
 		resources = append(resources, RequestGroup{
@@ -161,16 +179,18 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 		})
 
 		md5HashFunc := md5.New()
+		requests := make([]Request, 0)
 		for _, method := range service.Method {
 			// We don't want the addition of a new method to change the randomly
 			// generated values for all of the other methods. Set a deterministic
 			// seed based on method Name
 			sum := md5HashFunc.Sum([]byte(method.GetName()))[:8]
 			rand.Seed(int64(binary.BigEndian.Uint64(sum)))
-
 			msg := e.registry.MessageDefinition(method.GetInputType())
 			output := e.generateMockMessage(msg, 0)
-			resources = append(resources, Request{
+			comment, _ := e.registry.MethodComments(file, service, method)
+
+			requests = append(requests, Request{
 				Resource: Resource{
 					Type:     "request",
 					ID:       fmt.Sprintf("request-%s-%s", service.GetName(), method.GetName()),
@@ -189,48 +209,82 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 					MimeType: "application/json",
 					Text:     output,
 				},
+				Description: comment.Leading,
 			})
 		}
+
+		// Put the methods in alphabetical orders
+		sort.SliceStable(requests, func (i, j int) bool {
+			return requests[i].ID < requests[j].ID
+		})
+		for _, request := range requests {
+			resources = append(resources, request)
+		}
+
 	}
 	return resources
 }
 
-func generateEnvironment(workspaceID string) []interface{} {
-	baseEnv := Environment{
+func generateEnvironment(workspaceID string, param *string) ([]Environment, error) {
+	envs := make([]Environment, 0)
+	baseEnvName := "BaseEnvironment"
+	envs = append(envs, Environment{
 		Resource: Resource{
 			Type:     "environment",
-			ID:       "BaseEnvironment",
+			ID:       baseEnvName,
 			ParentID: &workspaceID,
 			Name:     "Base",
 		},
 		Data: map[string]string{},
+	})
+
+	if param != nil && len(*param) > 0 {
+		var config Config
+		err := json.Unmarshal([]byte(*param), &config)
+		if err != nil {
+			return []Environment{}, err
+		}
+
+		for name, url := range config.Environments {
+			envs = append(envs, Environment{
+				Resource: Resource{
+					Type:     "environment",
+					ID:       name,
+					ParentID: &baseEnvName,
+					Name:     name,
+				},
+				Data: map[string]string{
+					"base_url": url,
+				},
+			})
+		}
 	}
 
-	str := "BaseEnvironment"
-	httpsEnv := Environment{
+	envs = append(envs, Environment{
 		Resource: Resource{
 			Type:     "environment",
 			ID:       "LocalhostHttps",
-			ParentID: &str,
+			ParentID: &baseEnvName,
 			Name:     "Localhost - Https",
 		},
 		Data: map[string]string{
 			"base_url": "https://localhost:8000",
 		},
-	}
+	})
 
-	httpEnv := Environment{
+	envs = append(envs, Environment{
 		Resource: Resource{
 			Type:     "environment",
 			ID:       "LocalhostHttp",
-			ParentID: &str,
+			ParentID: &baseEnvName,
 			Name:     "Localhost - Http",
 		},
 		Data: map[string]string{
 			"base_url": "http://localhost:8000",
 		},
-	}
-	return []interface{}{baseEnv, httpsEnv, httpEnv}
+	})
+
+	return envs, nil
 }
 
 func (e *insomniaenv) generateMockMessage(messageDefinition *typemap.MessageDefinition, depth int) string {
