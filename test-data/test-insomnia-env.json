@@ -95,7 +95,7 @@
 			],
 			"body": {
 				"mimeType": "application/json",
-				"text": "{\n\t\"basePrice\": 85,\n\t\"taxablePrice\": -197\n}"
+				"text": "{\n\t\"params\": {\"this field named params contains\": \"a dynamically typed map.\", \"As input,\": \"you can pass any JSON object\"},\n\t\"timestamp\": \"1981-02-17T09:56:33-05:00\",\n\t\"maxAge\": \"303.016s\"\n}"
 			},
 			"description": " This is a comment about the B method\n"
 		},

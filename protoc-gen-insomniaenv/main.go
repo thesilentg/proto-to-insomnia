@@ -29,7 +29,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/thesilentg/proto-to-insomnia"
+	proto_to_insomnia "github.com/thesilentg/proto-to-insomnia"
 	"github.com/twitchtv/protogen"
 	"github.com/twitchtv/protogen/stringutils"
 	"github.com/twitchtv/protogen/typemap"
@@ -37,6 +37,7 @@ import (
 
 const (
 	protoFileExtension = ".proto"
+	maxDepth           = 25
 )
 
 func main() {
@@ -321,11 +322,18 @@ func (e *insomniaenv) generateMockMessage(messageDefinition *typemap.MessageDefi
 }
 
 func (e *insomniaenv) generateMockField(messageDefinition *typemap.MessageDefinition, field *descriptor.FieldDescriptorProto, depth int) string {
+	// In case of any strange fallback behavior which causes us to continue processing, I've added this as a fallback to ensure that we don't hang forever
+	if depth >= maxDepth {
+		return fmt.Sprintf("Max request depth of %d reached. This may indicate some error with proto-to-insomnia parsing logic", maxDepth)
+	}
+
 	// Special case these since they are interpreted differently
 	if field.GetTypeName() == ".google.protobuf.Timestamp" {
 		return fmt.Sprintf("\"%s\"", randomTimestamp())
 	} else if field.GetTypeName() == ".google.protobuf.Duration" {
 		return fmt.Sprintf("\"%d.%03ds\"", rand.Intn(1000), rand.Intn(100))
+	} else if field.GetTypeName() == ".google.protobuf.Struct" {
+		return fmt.Sprintf("{\"this field named %s contains\": \"a dynamically typed map.\", \"As input,\": \"you can pass any JSON object\"}", *field.Name)
 	}
 
 	switch fieldType := *field.Type; fieldType {

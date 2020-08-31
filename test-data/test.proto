@@ -1,4 +1,7 @@
 syntax = "proto3";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 
 package proto.to.insomania.test.package;
 
@@ -8,10 +11,16 @@ message Price {
     int32 taxable_price = 2;
 }
 
+message WrappedStruct {
+    google.protobuf.Struct params = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    google.protobuf.Duration max_age = 3;
+}
+
 // This is a comment about the service
 service TwitchPersonalization {
     // This is a comment about the B method
-    rpc B(Price) returns (Price);
+    rpc B(WrappedStruct) returns (Price);
     // This is a comment about the A method
     rpc A(Price) returns (Price);
     rpc C(Price) returns (Price);
