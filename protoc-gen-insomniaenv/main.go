@@ -29,6 +29,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/thesilentg/proto-to-insomnia"
 	"github.com/twitchtv/protogen"
 	"github.com/twitchtv/protogen/stringutils"
 	"github.com/twitchtv/protogen/typemap"
@@ -45,12 +46,6 @@ func main() {
 
 type insomniaenv struct {
 	registry *typemap.Registry
-}
-
-// This config is parsed from the input of the insomniaenv_opt command line argument
-// It is used to add additional environments besides localhost into the exported Environment
-type Config struct {
-	Environments map[string]string `json:"environments"`
 }
 
 // InsomniaExport describes the structure of an Insomnia export
@@ -89,11 +84,11 @@ type RequestGroup struct {
 // Request describes the structure of an Insomnia Request
 type Request struct {
 	Resource
-	Method  string              `json:"method"`
-	URL     string              `json:"url"`
-	Headers []map[string]string `json:"headers"`
-	Body    RequestBody         `json:"body"`
-	Description string 			`json:"description"`
+	Method      string              `json:"method"`
+	URL         string              `json:"url"`
+	Headers     []map[string]string `json:"headers"`
+	Body        RequestBody         `json:"body"`
+	Description string              `json:"description"`
 }
 
 // RequestBody describes the structure of an Insomnia RequestBody
@@ -214,7 +209,7 @@ func (e *insomniaenv) generateMethods(workspaceID string, file *descriptor.FileD
 		}
 
 		// Put the methods in alphabetical orders
-		sort.SliceStable(requests, func (i, j int) bool {
+		sort.SliceStable(requests, func(i, j int) bool {
 			return requests[i].ID < requests[j].ID
 		})
 		for _, request := range requests {
@@ -239,7 +234,7 @@ func generateEnvironment(workspaceID string, param *string) ([]Environment, erro
 	})
 
 	if param != nil && len(*param) > 0 {
-		var config Config
+		var config proto_to_insomnia.Config
 		err := json.Unmarshal([]byte(*param), &config)
 		if err != nil {
 			return []Environment{}, err
