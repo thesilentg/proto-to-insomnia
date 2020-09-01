@@ -17,7 +17,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"path/filepath"
@@ -121,7 +120,7 @@ func (e *insomniaenv) Generate(in *plugin.CodeGeneratorRequest) (*plugin.CodeGen
 func (e *insomniaenv) generate(file *descriptor.FileDescriptorProto, param *string) (*plugin.CodeGeneratorResponse_File, error) {
 	resp := new(plugin.CodeGeneratorResponse_File)
 	if len(file.Service) == 0 {
-		return nil, errors.New("no service")
+		return nil, nil
 	}
 
 	insomniaExport := InsomniaExport{
@@ -322,7 +321,7 @@ func (e *insomniaenv) generateMockMessage(messageDefinition *typemap.MessageDefi
 }
 
 func (e *insomniaenv) generateMockField(messageDefinition *typemap.MessageDefinition, field *descriptor.FieldDescriptorProto, depth int) string {
-	// In case of any strange fallback behavior which causes us to continue processing, I've added this as a fallback to ensure that we don't hang forever
+	// In case of any strange behavior which causes us to continue processing, I've added this as a fallback to ensure that we don't hang forever
 	if depth >= maxDepth {
 		return fmt.Sprintf("Max request depth of %d reached. This may indicate some error with proto-to-insomnia parsing logic", maxDepth)
 	}
